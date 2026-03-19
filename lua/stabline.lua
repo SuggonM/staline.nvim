@@ -2,7 +2,13 @@ local Stabline = {}
 local util = require("staline.utils")
 local stabline_loaded
 local normal_bg, normal_fg
-local opts = { style='bar', exclude_fts={'NvimTree', 'help', 'dashboard', 'lir', 'alpha'}, numbers=nil }
+local opts = {
+    style = 'bar',
+    exclude_fts = {'NvimTree', 'help', 'dashboard', 'lir', 'alpha'},
+    numbers = nil,
+    mod_symbol = ' ',
+    mod_color = '#ffb000'
+}
 -- NOTE: other opts: fg, bg, stab_start, stab_end, stab_right, stab_left, stab_bg, inactive_bg, inactive_fg
 
 local type_chars={ bar={left="┃", right=" "}, slant={left="", right=""}, arrow={left="", right=""}, bubble={left="", right=""} }
@@ -44,6 +50,8 @@ local refresh_colors = function()
     util.colorize('StablineInactive', inactive_fg, inactive_bg, opts.font_inactive)
     util.colorize('StablineInactiveRight', inactive.right.f, inactive.right.b)
     util.colorize('StablineInactiveLeft', inactive.left.f, inactive.left.b)
+    util.colorize('StablineModified', opts.mod_color, bg_hex)
+    util.colorize('StablineModifiedInactive', opts.mod_color, inactive_bg)
 end
 
 Stabline.setup = function(setup_opts)
@@ -79,9 +87,9 @@ Stabline.get_tabline = function()
     local counter = 1
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buflisted then
-            local edited = vim.bo.modified and "" or " "
+            local edited = vim.bo[buf].modified
 
-            local f_name = vim.api.nvim_buf_get_name(buf):match("^.+[\\/](.+)$") or "" -- TODO: use fnamemodify()?
+            local f_name = vim.api.nvim_buf_get_name(buf):match("^.+[\\/](.+)$") or "[NEW]" -- TODO: use fnamemodify()?
             local ext = string.match(f_name, "%w+%.(.+)")
             local f_icon, icon_hl = util.get_file_icon(f_name, ext)
 
@@ -98,9 +106,11 @@ Stabline.get_tabline = function()
             "%"..buf.."@v:lua.PickBuffer@".. -- start for picking buffer
             get_number_format(buf, counter)..
             (s and do_icon_hl(icon_hl) or "")..f_icon.." "..
-            "%#Stabline"..(s and "Sel" or "Inactive").."#"..f_name.." "..
+            "%#Stabline"..(s and "Sel" or "Inactive").."#"..f_name..
+            (edited and "%#StablineModified"..(s and "#" or "Inactive#") or "")..
+            (edited and opts.mod_symbol.." " or "  ")..
             "%X".. -- end for picking buffer
-            (" "):rep(opts.padding or 0).. (s and edited or " ")..
+            (" "):rep(opts.padding or 0)..
             "%#Stabline"..(s and "" or "Inactive").."Right#"..stab_right
 
             counter = counter + 1
