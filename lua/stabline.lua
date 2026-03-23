@@ -13,9 +13,23 @@ local opts = {
 
 local type_chars={ bar={left="┃", right=" "}, slant={left="", right=""}, arrow={left="", right=""}, bubble={left="", right=""} }
 
-function PickBuffer(buf_id)
+function BufferClick(buf_id, _, button)
    local window = vim.api.nvim_get_current_win()
-   vim.api.nvim_win_set_buf(window, buf_id)
+
+   if button == 'l' then
+       vim.api.nvim_win_set_buf(window, buf_id)
+       return
+   end
+
+   if button ~= 'm' then return end
+   if vim.bo[buf_id].modified then
+       vim.notify('Buffer has unsaved changes', 'WARN', { title = 'staline.nvim' })
+       return
+   end
+   if vim.api.nvim_get_current_buf() == buf_id then
+       vim.cmd('bnext')
+   end
+   vim.api.nvim_buf_delete(buf_id, {})
 end
 
 local refresh_colors = function()
@@ -103,13 +117,13 @@ Stabline.get_tabline = function()
             "%#Stabline"..(s and "" or "Inactive").."Left#"..stab_left..
             "%#Stabline"..(s and "Sel" or "Inactive").."#   "..
             (" "):rep(opts.padding or 0)..
-            "%"..buf.."@v:lua.PickBuffer@".. -- start for picking buffer
+            "%"..buf.."@v:lua.BufferClick@".. -- start for buffer click handle
             get_number_format(buf, counter)..
             (s and do_icon_hl(icon_hl) or "")..f_icon.." "..
             "%#Stabline"..(s and "Sel" or "Inactive").."#"..f_name..
             (edited and "%#StablineModified"..(s and "#" or "Inactive#") or "")..
             (edited and opts.mod_symbol.." " or "  ")..
-            "%X".. -- end for picking buffer
+            "%X".. -- end for buffer click handle
             (" "):rep(opts.padding or 0)..
             "%#Stabline"..(s and "" or "Inactive").."Right#"..stab_right
 
